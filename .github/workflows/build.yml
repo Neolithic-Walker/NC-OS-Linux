@@ -15,13 +15,22 @@ on:
 
 env:
   IMAGE_REGISTRY: "ghcr.io/${{ github.repository_owner }}"  # do not edit
+  # Images are only signed once the SIGNING_SECRET repository secret exists (see docs/PRIVACY.md).
+  HAS_SIGNING_KEY: ${{ secrets.SIGNING_SECRET != '' }}
 
 concurrency:
   group: ${{ github.workflow }}-${{ github.ref || github.run_id }}-${{ inputs.brand_name}}-${{ inputs.stream_name }}
   cancel-in-progress: true
 
 jobs:
+  privacy:
+    name: Privacy scan
+    uses: ./.github/workflows/privacy.yml
+    secrets:
+      PRIVACY_BLOCKLIST: ${{ secrets.PRIVACY_BLOCKLIST }}
+
   build_push:
+    needs: privacy
     name: Build and push image
     runs-on: ubuntu-26.04
 
@@ -151,7 +160,7 @@ jobs:
 
       - name: Sign container image
         id: sign-image
-        if: github.event_name != 'pull_request' && github.ref == format('refs/heads/{0}', github.event.repository.default_branch)
+        if: github.event_name != 'pull_request' && github.ref == format('refs/heads/{0}', github.event.repository.default_branch) && env.HAS_SIGNING_KEY == 'true'
         env:
           COSIGN_EXPERIMENTAL: false
           COSIGN_PRIVATE_KEY: ${{ secrets.SIGNING_SECRET }}

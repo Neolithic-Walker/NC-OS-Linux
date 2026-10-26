@@ -1,6 +1,37 @@
+# NC-OS uses an ALLOW-LIST: everything is ignored unless it is listed below.
+# Adding a new top-level file or folder means adding it here on purpose.
+# See docs/PRIVACY.md.
+/*
+!/.gitignore
+!/.gitattributes
+!/.gitleaks.toml
+!/.github/
+!/.githooks/
+!/build_files/
+!/system_files/
+!/disk_config/
+!/scripts/
+!/docs/
+!/Containerfile
+!/Justfile
+!/image-template.env
+!/README.md
+!/LICENSE
+!/cosign.pub
+
+# Never, even inside allowed folders
 cosign.key
+*.key
+*.pem
+.env
+*.env.local
+privacy-blocklist*
+output/
 _build_*
-output
 _build-*/**
 *_chunkah_*
 *_rpm-ostree_*
+*.log
+.DS_Store
+Thumbs.db
+desktop.ini

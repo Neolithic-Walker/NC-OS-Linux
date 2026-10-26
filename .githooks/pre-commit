@@ -1,0 +1,11 @@
+#!/usr/bin/env bash
+# NC-OS pre-commit: block commits that contain secrets or personal data.
+# Enable once per clone:  git config core.hooksPath .githooks
+set -euo pipefail
+root="$(git rev-parse --show-toplevel)"
+"$root/scripts/privacy-check.sh" --staged
+if command -v gitleaks >/dev/null 2>&1; then
+  gitleaks git --staged --redact --no-banner "$root"
+else
+  echo "pre-commit: gitleaks not installed; secret scan skipped here (CI still runs it)." >&2
+fi

@@ -1,0 +1,42 @@
+---
+# Runs on every push and pull request, and is called by the image build before it starts.
+# Fails on secrets (gitleaks) or on anything in the private blocklist (an encrypted secret).
+name: Privacy scan
+on:
+  push:
+  pull_request:
+  workflow_call:
+    secrets:
+      PRIVACY_BLOCKLIST:
+        required: false
+
+permissions:
+  contents: read
+
+jobs:
+  scan:
+    name: Secrets and personal data
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout (full history)
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
+        with:
+          fetch-depth: 0
+
+      - name: Install gitleaks
+        env:
+          GITLEAKS_VERSION: "8.28.0"
+        run: |
+          curl -sSL -o /tmp/gitleaks.tgz "https://github.com/gitleaks/gitleaks/releases/download/v${GITLEAKS_VERSION}/gitleaks_${GITLEAKS_VERSION}_linux_x64.tar.gz"
+          tar -xzf /tmp/gitleaks.tgz -C /tmp gitleaks
+          sudo mv /tmp/gitleaks /usr/local/bin/gitleaks
+
+      - name: Secret scan (whole history)
+        run: gitleaks git --redact --no-banner --config .gitleaks.toml .
+
+      - name: Personal data scan (private blocklist)
+        env:
+          NCOS_BLOCKLIST: ${{ secrets.PRIVACY_BLOCKLIST }}
+          # Pull requests from forks can't read secrets; gitleaks above still runs for them.
+          NCOS_ALLOW_NO_BLOCKLIST: ${{ github.event_name == 'pull_request' && github.event.pull_request.head.repo.full_name != github.repository && '1' || '0' }}
+        run: scripts/privacy-check.sh --history
